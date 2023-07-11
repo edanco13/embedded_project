@@ -77,6 +77,16 @@ bool clapDetector() {
   return false; // return false indicating no clap is detected
 }
 
+void oledPrint(char* text, int line, int value = NULL, bool needToClearFirst = false)
+{
+  if(needToClearFirst)
+    Oled.clear();
+  Oled.setCursor(0, line);
+  Oled.print(text);
+  if(value !=NULL)
+    Oled.print(value);
+}
+
 
 void loop() {
   unsigned long currentMillis = millis();  // get the current time
@@ -85,28 +95,18 @@ void loop() {
 
   if (didClaped) {
     if (currentclaps == 0) {
-      Serial.println(currentclaps);
       waitingForMoreClaps = currentMillis + 1000;  // set the time stamp for waiting for more claps
     } else {
       waitingForMoreClaps + 500;  // add 500 milliseconds to the waiting time
     }
     currentclaps++;  // increment the number of current claps
-
-    Oled.clear();  // clear the OLED display
-    Oled.setCursor(0, 1);
-    Oled.print("current claps:");  // display the current number of claps
-    Oled.print(currentclaps);
-    Serial.println(currentclaps);  //pPrint the current number of claps to serial monitor
+    oledPrint("current claps:",1,currentclaps,true);
   }
 
   // check if waiting time is over and there are some claps
   if (waitingForMoreClaps <= currentMillis && currentclaps != 0) {
     totalClaps += currentclaps;  // update the total number of claps
-    Oled.clear();  // clear the OLED display
-    Oled.setCursor(0, 1);
-    Oled.print("total claps:");  // display the total number of claps
-    Oled.print(totalClaps);
-
+    oledPrint("total claps:",1,totalClaps,true);
     // check the number of claps and perform corresponding actions
     switch (currentclaps) {
       case 0:
@@ -114,11 +114,11 @@ void loop() {
       case 1:
         currMode = 1;  // set the current mode to 1
         digitalWrite(LED_PIN, !digitalRead(LED_PIN));  // toggle the LED pin
-        Oled.setCursor(0, 2);
-        Oled.print("mode led");  // display the current mode on the OLED display
+        oledPrint("mode led",2);
         break;
       case 2:
         currMode = (currMode == 2) ? 0 : 2;  // toggle between mode 0 and mode 2
+        oledPrint("mode light",2);
         break;
       default:
         currMode = currentclaps;  // set the current mode to the number of claps
@@ -128,14 +128,16 @@ void loop() {
     currentclaps = 0;  // reset the number of current claps
   }
 
-  // update the OLED display in mode 2 every 500 milliseconds
-  if ((currentMillis - previousMillisForOled >= 500) && currMode == 2) {
+  if ((currentMillis - previousMillisForOled >= 500)) {
+    switch (currMode) {
+      case 2:
+        Oled.clearLine(3); //clear the line as the data dynamic
+        oledPrint("light: ",3,analogRead(LIGHT_PIN));
+        break;
+      default:
+        break;
+    }
     previousMillisForOled = currentMillis;  // update the time stamp
-    Oled.setCursor(0, 2);
-    Oled.print("mode light");  // display the current mode on the OLED display
-    Oled.clearLine(3);
-    Oled.setCursor(0, 3);
-    Oled.print("light: ");
-    Oled.print(analogRead(LIGHT_PIN));
+    
   }
 }
